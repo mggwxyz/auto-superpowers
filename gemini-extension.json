@@ -1,6 +1,6 @@
 {
   "name": "auto-superpowers",
-  "description": "Core skills library: TDD, debugging, collaboration patterns, and proven techniques",
-  "version": "5.0.7",
+  "description": "Autonomous fork of superpowers: spec → plan → execute workflow without interactive prompts",
+  "version": "0.1.0",
   "contextFileName": "GEMINI.md"
 }
