@@ -32,7 +32,7 @@ You MUST create a task for each of these items and complete them in order:
 7. **On any tier-C halt** — write `halted.md`, stop the skill, do not proceed to step 8
 8. **Draft the spec** — using the decision answers, write `spec.md` in the session directory
 9. **Spec self-review** — placeholder scan, internal consistency, scope, ambiguity (fix inline)
-10. **Commit** — stage and commit the session directory contents with the commit trailer defined in `skills/session-artifacts/SKILL.md`
+10. **Commit if allowed** — if the session directory is NOT gitignored, stage and commit its contents with the commit trailer defined in `skills/session-artifacts/SKILL.md`. If it IS gitignored, skip the commit entirely and note this in the return status. (Phase 1 `.gitignore` ignores session directories by default.)
 11. **Return control** — emit a terse status summary naming the session directory
 
 ## Process Flow
@@ -119,15 +119,25 @@ After writing, look at the spec with fresh eyes:
 
 Fix any issues inline. No re-review.
 
-**Commit the session directory:**
+**Commit the session directory (conditional):**
 
-Stage all files in the session directory and commit with this message format:
+Before committing, check whether the session directory is gitignored:
 
+```bash
+git check-ignore -q <session-dir>
 ```
-auto-superpowers: brainstorm spec for <slug>
 
-Session: docs/auto-superpowers/sessions/<dir>/
-```
+- **Not gitignored (check-ignore returns exit 1):** stage and commit the session directory contents with this message format:
+
+  ```
+  auto-superpowers: brainstorm spec for <slug>
+
+  Session: docs/auto-superpowers/sessions/<dir>/
+  ```
+
+- **Gitignored (check-ignore returns exit 0):** skip the commit entirely. Do NOT use `git add -f` to force the add — that would violate the privacy-by-default rule in `skills/session-artifacts/SKILL.md`. The session files still exist on disk and are readable by the user; they are simply untracked. Note the skipped commit clearly in the return status so the user knows the files exist but are not in git history.
+
+Users who want session history committed remove `docs/auto-superpowers/sessions/` from `.gitignore` (or use the future `--commit-session-log` flag when Phase 3 ships).
 
 **Return terse status:**
 
