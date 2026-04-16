@@ -1,20 +1,16 @@
 {
-  "name": "superpowers",
-  "description": "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques",
-  "version": "5.0.7",
+  "name": "auto-superpowers",
+  "description": "Autonomous fork of superpowers: spec → plan → execute workflow without interactive prompts",
+  "version": "0.1.0",
   "author": {
-    "name": "Jesse Vincent",
-    "email": "jesse@fsck.com"
+    "name": "Michael Gilbertson"
   },
-  "homepage": "https://github.com/obra/superpowers",
-  "repository": "https://github.com/obra/superpowers",
   "license": "MIT",
   "keywords": [
     "skills",
+    "autonomous",
     "tdd",
-    "debugging",
-    "collaboration",
-    "best-practices",
-    "workflows"
+    "workflows",
+    "walk-away"
   ]
 }
