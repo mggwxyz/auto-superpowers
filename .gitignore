@@ -5,3 +5,7 @@
 node_modules/
 inspo
 triage/
+
+# auto-superpowers — session directories gitignored by default
+# (per spec; opt in with --commit-session-log in Phase 3)
+docs/auto-superpowers/sessions/
