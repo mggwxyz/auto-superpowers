@@ -30,6 +30,8 @@ The `decision-proxy` subagent uses this guide to pick which installed Claude ski
 | Design systems / tokens / component specs | `ckm-design-system`, `ckm-ui-styling` |
 | Skill authoring / plugin design | `skill-creator`, `writing-skills` |
 | Git / branch hygiene / commit structure | `verification-before-completion` (for completion gates); no direct skill otherwise |
+| CLI tool design / Unix utility / systems programming / shell ergonomics | no direct skill — use general reasoning grounded in Unix conventions (stdin/stdout composability, predictable exit codes, argparse or equivalent, minimal dependencies, follow the principle of least surprise against tools like `jq`, `grep`, `sort`, `cat`) |
+| Build tooling / packaging / release engineering (non-Claude plugin) | no direct skill — general reasoning; prefer the ecosystem's boring default (pip/pipx for Python, cargo for Rust, npm for Node, brew for system tools) |
 
 ## Fallback rule
 

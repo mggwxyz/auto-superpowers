@@ -85,6 +85,19 @@ digraph auto_brainstorming {
 - After each dispatch, append a structured entry to `session-log.md` in the format defined by `skills/session-artifacts/SKILL.md`.
 - If the proxy returns `tier_override: C` with low confidence, write `halted.md` and STOP the skill. Do not proceed.
 
+**Sequential vs. parallel dispatch:**
+
+Decisions with semantic dependencies MUST be sequential — if decision B's framing or task context depends on decision A's answer, dispatch A first, wait for its result, then frame B using A's answer. Independent decisions (where one answer does not change another's framing) MAY be dispatched in parallel to save wall-clock time. When in doubt, sequential.
+
+Example — independent, parallel-safe:
+- "Which color palette?" and "Which database?" — no overlap.
+
+Example — dependent, must be sequential:
+- "Which language?" followed by "Which test runner for that language?" — the second question's options list is different per language.
+- "Should output default be NDJSON or array?" followed by decisions whose task-context line references that default — the downstream prompts would be written with a stale assumption otherwise.
+
+If you dispatch in parallel and a later answer contradicts a task-context assumption you embedded in a peer dispatch, note the staleness explicitly in the session-log entry for the affected decision, verify the answer still stands under the corrected context (re-dispatch if it doesn't), and make the spec reflect the authoritative answer.
+
 **Drafting the spec:**
 
 - Write `spec.md` using the decision answers. Structure the document per the normal superpowers spec conventions (summary, goals/non-goals, architecture, components, data flow, error handling, testing). The decision-proxy answers drive the content.
