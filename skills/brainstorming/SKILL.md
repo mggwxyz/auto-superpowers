@@ -13,6 +13,8 @@ You are running inside the auto-superpowers plugin. Read `skills/using-auto-supe
 Do NOT invoke any implementation skill, write any code, or scaffold any project in this skill. Your only outputs are `session-log.md` and `spec.md` inside the session directory. Implementation is a later stage (writing-plans, executing-plans). This applies to EVERY project regardless of perceived simplicity.
 
 Do NOT proceed to writing-plans if any tier-C decision halted to `halted.md` during this brainstorm.
+
+If `<session-dir>/halted.md` already exists when you start (for example, the caller passed a session dir from a prior halt), do NOT proceed. Return terse status reporting the pre-existing halt and stop. On a resume flow, the caller is responsible for archiving `halted.md` (e.g., renaming it to `halted-resolved-<timestamp>.md`) BEFORE invoking this skill.
 </HARD-GATE>
 
 ## Anti-Pattern: "This Is Too Simple To Need A Design"

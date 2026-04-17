@@ -13,6 +13,13 @@ Load plan, self-check against repo state, execute all tasks non-interactively wi
 
 **Context:** You are running inside the auto-superpowers plugin. Read `skills/using-auto-superpowers/SKILL.md`, `skills/session-artifacts/SKILL.md`, and `skills/decision-proxy/SKILL.md` before starting. The caller (the pipeline driver or a command shim) will name the session directory. Use it.
 
+**Input parsing:** Look for these sentinels on their own lines in the input prompt:
+
+- `SESSION_DIR: <path>` — the session directory to work in.
+- `PLAN: <path>` — the plan to execute. If absent, default to `<session-dir>/plan.md`.
+
+If no `SESSION_DIR:` line is present, fall back to the most recent directory under `docs/auto-superpowers/sessions/`. If no plan exists there, emit a one-line error and stop.
+
 <HARD-GATE>
 Do NOT proceed if `<session-dir>/halted.md` exists. A prior stage halted on a tier-C decision and the user has not resumed. Return terse status reporting the halt and stop.
 </HARD-GATE>
@@ -39,7 +46,7 @@ Autonomous mode assumes subagent-driven execution when subagents are available. 
 
 For each task in order:
 
-1. Read the task's `Tier:` annotation (from the plan).
+1. Read the task's `Tier:` annotation (from the plan). If the task has no `Tier:` line, treat it as tier B by default. If the annotation is malformed (e.g., `Tier: medium`), treat as tier C and dispatch the `decision-proxy` to classify before proceeding. Note that the task's annotated tier is distinct from a failure's tier (below): the former gates pre-task proxy dispatches, the latter gates mid-task halts.
 2. Mark as in_progress in TodoWrite.
 3. Run each step in the task exactly as written (bite-sized TDD steps).
 4. **Verification gate before moving to the next plan step:**
@@ -49,7 +56,7 @@ For each task in order:
      - Assess whether the failure is in code the current task introduced (tier B) or a regression in unrelated code (tier C).
      - Tier B: dispatch `decision-proxy` if the failure's cause is unclear; otherwise iterate per the task's debugging steps.
      - Tier C: write `halted.md` with the regression details and STOP.
-5. **If 3+ fixes fail on the same task's tests, invoke systematic-debugging's 3+ failures rule — write `halted.md` with the fix history and hypothesis. STOP.**
+5. **If 3+ fixes fail on the same task's tests, invoke `auto-superpowers:systematic-debugging` and follow its Phase 4 step 5.** That skill dispatches the `decision-proxy` with `tier: C` for the architectural hypothesis and writes `halted.md` with the full fix history. STOP. Do NOT write `halted.md` yourself in this path — defer to systematic-debugging so the architectural-hypothesis proxy dispatch is not skipped.
 6. For tier-B or tier-C plan tasks (annotated in the plan), dispatch the `decision-proxy` BEFORE starting the task for any genuinely open question the plan left. Log the entry.
 
 ### Step 3: Return (Phase 2: stop at impl)
@@ -57,7 +64,7 @@ For each task in order:
 After all tasks complete and the test suite passes:
 
 - Append a "## Halts" section to `session-log.md` if any halts occurred (or `(none)` if clean).
-- Check whether the session directory is gitignored. If NOT gitignored, commit any remaining session-log.md updates with:
+- Check whether the session directory is gitignored: run `git check-ignore -q <session-dir>`. Exit 0 means gitignored; exit 1 means tracked. If tracked (exit 1), `git add <session-dir>/session-log.md` and commit with:
 
   ```
   auto-superpowers: execute plan for <slug>
@@ -65,7 +72,7 @@ After all tasks complete and the test suite passes:
   Session: docs/auto-superpowers/sessions/<dir>/
   ```
 
-  If gitignored, skip the commit and note "execute-phase commit skipped (gitignored)" in status.
+  If gitignored (exit 0), skip the session-artifact commit and note "execute-phase commit skipped (gitignored)" in status. Do NOT use `git add -f` to force-commit a gitignored path — respect the user's gitignore. (The task commits produced during execution are unrelated to this session-log commit and are never gitignored.)
 - Emit terse status: session dir, tasks completed, halts, current branch, HEAD sha. Return. Do NOT invoke `finishing-a-development-branch` — Phase 3 adds that.
 
 Phase 2 always stops at `impl`. Phase 3 adds `--stop-at pr` and `--stop-at merged` stages that chain into `finishing-a-development-branch`.
@@ -104,7 +111,7 @@ Phase 2 always stops at `impl`. Phase 3 adds `--stop-at pr` and `--stop-at merge
 ## Integration
 
 **Required workflow skills:**
-- **auto-superpowers:using-git-worktrees** (or upstream) — REQUIRED: Set up isolated workspace before starting. The pipeline driver (`/auto` command) handles this for pipeline runs; standalone `/auto-execute` callers are responsible for worktree setup themselves.
+- **auto-superpowers:using-git-worktrees** (or upstream) — REQUIRED: Set up isolated workspace before starting. Phase 2's `/auto` pipeline driver does NOT auto-create worktrees yet — it refuses to run on main/master and expects the caller to have created a feature branch or worktree first. Standalone `/auto-execute` callers have the same responsibility. Phase 3 may add auto-worktree-creation to `/auto`.
 - **auto-superpowers:writing-plans** — Creates the plan this skill executes
 - **auto-superpowers:systematic-debugging** — For root-cause investigation on test failures; enforces the 3+ failures halt rule
 - **auto-superpowers:test-driven-development** — For RED/GREEN/REFACTOR discipline within each task

@@ -8,18 +8,16 @@ You have been invoked via the `/auto` command. The user has walked away and expe
 
 - First positional argument (or everything before any `--flag`) is the task description. If empty, emit a usage error and stop.
 - `--stop-at <spec|plan|impl>` — default `impl`. Where the pipeline halts on success.
-- `--docs-root <path>` — override the default `docs/auto-superpowers/`.
-- `--persona <skill[,skill...]>` — force specific skills to be the primary persona sources (overrides auto-detection).
-- `--resume <session-dir>` — pick up a previously halted session from its `halted.md`. Skip stages already completed in that session.
-- `--commit-session-log` / `--no-commit-session-log` — override the default gitignore behavior for this session's artifacts.
+- `--persona <skill[,skill...]>` — force specific skills to be the primary persona sources during Stage 1 (brainstorming). Personas are brainstorming-only; writing-plans and executing-plans do not take a persona parameter.
+- `--resume <session-dir>` — pick up a previously halted session. Before invoking Stage 1, read `<session-dir>/halted.md` into context, then archive it by renaming to `halted-resolved-<YYYY-MM-DD-HHMM>.md` so downstream HARD-GATEs do not trigger on the stale halt file. The user is expected to have addressed the halt's question in `session-log.md` or `user-preferences.md` before resuming.
 
 **Pipeline steps:**
 
 1. **Parse + pre-flight.** Verify the task description is present. Verify you are NOT on `main`/`master` — if you are, halt with a one-line error telling the user to create a worktree or feature branch first.
 
-2. **Create (or resume) session directory.** Default path: `docs/auto-superpowers/sessions/<YYYY-MM-DD-HHMM-slug>/` following the slug rules in `skills/session-artifacts/SKILL.md`. If `--resume <session-dir>` was provided, reuse that directory.
+2. **Create (or resume) session directory.** Default path: `docs/auto-superpowers/sessions/<YYYY-MM-DD-HHMM-slug>/` following the slug rules in `skills/session-artifacts/SKILL.md`. If `--resume <session-dir>` was provided, reuse that directory AND archive any existing `halted.md` by `mv halted.md halted-resolved-<YYYY-MM-DD-HHMM>.md`. The stale halt file would otherwise block every downstream stage's HARD-GATE.
 
-3. **Write (or extend) session-log.md header.** If fresh, write the full header with task, stop-at, and detected persona skills (use `Skill` tool listing). If resuming, append a `## Phase: pipeline-resume` marker and note the resume time.
+3. **Write (or extend) session-log.md header.** If fresh, write the full header with task, stop-at, and detected persona skills (use `Skill` tool listing). If resuming, append a `## Phase: pipeline-resume` marker, note the resume time, and record the archived-halt filename.
 
 4. **Stage 1 — Brainstorming.** Invoke `auto-superpowers:brainstorming` via the `Skill` tool with this input prompt format:
 

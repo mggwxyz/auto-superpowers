@@ -15,6 +15,13 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** You are running inside the auto-superpowers plugin. Read `skills/using-auto-superpowers/SKILL.md`, `skills/session-artifacts/SKILL.md`, and `skills/decision-proxy/SKILL.md` before starting. The caller (a pipeline driver or a command shim) will provide the session directory path. Use it.
 
+**Input parsing:** Look for these sentinels on their own lines in the input prompt:
+
+- `SESSION_DIR: <path>` — the session directory to write into.
+- `SPEC: <path>` — the spec to read. If absent, default to `<session-dir>/spec.md`.
+
+If no `SESSION_DIR:` line is present, fall back to the most recent directory under `docs/auto-superpowers/sessions/`. If no session directory exists at all, emit a one-line error and stop.
+
 **Save plans to:** `<session-dir>/plan.md` (the session directory the caller provided, or the most recent session directory under `docs/auto-superpowers/sessions/` if the caller said "most recent"). Do NOT write to `docs/superpowers/plans/` — that is the upstream convention; auto-superpowers uses per-session directories.
 
 <HARD-GATE>
@@ -147,8 +154,8 @@ Steps:
 1. Append a `## Phase: writing-plans` section marker to `<session-dir>/session-log.md` if not already present.
 2. For every meaningful planning decision (e.g., "split this into 8 tasks vs. 4", "put helpers in a new file vs. extend an existing one", "use pytest vs. unittest"), dispatch the decision-proxy and log the entry. Tier-A mechanical choices (function names, task numbering) are silent.
 3. Write `<session-dir>/plan.md` with the tasks, the Plan Document Header, and per-task `Tier:` annotations.
-4. Run the spec self-review loop from the upstream skill text below. Fix inline.
-5. Check whether the session directory is gitignored (`git check-ignore -q <session-dir>`). If NOT gitignored, commit with:
+4. Run the Self-Review checklist above. Fix inline.
+5. Check whether the session directory is gitignored: run `git check-ignore -q <session-dir>`. Exit 0 means gitignored; exit 1 means tracked. If tracked (exit 1), `git add <session-dir>/plan.md` and commit with:
 
    ```
    auto-superpowers: plan for <slug>
@@ -156,5 +163,5 @@ Steps:
    Session: docs/auto-superpowers/sessions/<dir>/
    ```
 
-   If IT IS gitignored, skip the commit and note "plan committed skipped (gitignored)" in the return status.
+   If gitignored (exit 0), skip the commit and note "plan commit skipped (gitignored)" in the return status. Do NOT use `git add -f` to force-commit a gitignored path — respect the user's gitignore.
 6. Emit terse status: session dir, plan path, decision count, any halts. Return. Do NOT invoke executing-plans, subagent-driven-development, or any other skill — the pipeline driver owns what happens next.
