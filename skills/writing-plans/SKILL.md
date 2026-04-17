@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: "Use when auto-superpowers writing-plans is invoked (via /auto-plan or /auto). Reads spec.md from the session directory and writes plan.md non-interactively, applying TDD granularity rules and committing the plan file. No interactive execution-handoff — the pipeline driver owns what happens next."
 ---
 
 # Writing Plans
@@ -11,12 +11,15 @@ Write comprehensive implementation plans assuming the engineer has zero context 
 
 Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
-**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+**Announce at start:** "I'm using the auto-superpowers:writing-plans skill to create the implementation plan."
 
-**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+**Context:** You are running inside the auto-superpowers plugin. Read `skills/using-auto-superpowers/SKILL.md`, `skills/session-artifacts/SKILL.md`, and `skills/decision-proxy/SKILL.md` before starting. The caller (a pipeline driver or a command shim) will provide the session directory path. Use it.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+**Save plans to:** `<session-dir>/plan.md` (the session directory the caller provided, or the most recent session directory under `docs/auto-superpowers/sessions/` if the caller said "most recent"). Do NOT write to `docs/superpowers/plans/` — that is the upstream convention; auto-superpowers uses per-session directories.
+
+<HARD-GATE>
+Do NOT proceed if `<session-dir>/halted.md` exists. A prior stage halted on a tier-C decision and the user has not resumed. Return terse status reporting the halt and stop.
+</HARD-GATE>
 
 ## Scope Check
 
@@ -49,13 +52,15 @@ This structure informs the task decomposition. Each task should produce self-con
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use auto-superpowers:subagent-driven-development (or auto-superpowers:executing-plans) to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
 **Architecture:** [2-3 sentences about approach]
 
 **Tech Stack:** [Key technologies/libraries]
+
+**Session:** `docs/auto-superpowers/sessions/<dir>/` — see [session-log.md](./session-log.md) for the spec and autonomous-decision transcript that produced this plan.
 
 ---
 ```
@@ -64,6 +69,8 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ````markdown
 ### Task N: [Component Name]
+
+**Tier:** [A | B | C] (A = mechanical, B = substantive, C = load-bearing — executing-plans uses this to decide when to dispatch the decision-proxy)
 
 **Files:**
 - Create: `exact/path/to/file.py`
@@ -131,22 +138,23 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
-## Execution Handoff
+## Execution Handoff (autonomous)
 
-After saving the plan, offer execution choice:
+After saving the plan, do NOT offer a choice. Autonomous mode always defaults to subagent-driven execution. If for some reason the caller (pipeline driver) needs inline execution, it will say so in the input prompt; otherwise subagent-driven is the assumed execution shape.
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+Steps:
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+1. Append a `## Phase: writing-plans` section marker to `<session-dir>/session-log.md` if not already present.
+2. For every meaningful planning decision (e.g., "split this into 8 tasks vs. 4", "put helpers in a new file vs. extend an existing one", "use pytest vs. unittest"), dispatch the decision-proxy and log the entry. Tier-A mechanical choices (function names, task numbering) are silent.
+3. Write `<session-dir>/plan.md` with the tasks, the Plan Document Header, and per-task `Tier:` annotations.
+4. Run the spec self-review loop from the upstream skill text below. Fix inline.
+5. Check whether the session directory is gitignored (`git check-ignore -q <session-dir>`). If NOT gitignored, commit with:
 
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
+   ```
+   auto-superpowers: plan for <slug>
 
-**Which approach?"**
+   Session: docs/auto-superpowers/sessions/<dir>/
+   ```
 
-**If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
-- Fresh subagent per task + two-stage review
-
-**If Inline Execution chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
-- Batch execution with checkpoints for review
+   If IT IS gitignored, skip the commit and note "plan committed skipped (gitignored)" in the return status.
+6. Emit terse status: session dir, plan path, decision count, any halts. Return. Do NOT invoke executing-plans, subagent-driven-development, or any other skill — the pipeline driver owns what happens next.
