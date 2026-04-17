@@ -24,8 +24,8 @@ Every project goes through this process. A todo list, a single-function utility,
 You MUST create a task for each of these items and complete them in order:
 
 1. **Parse invocation** — read task description, flags (`--docs-root`, `--persona`), and determine the session slug
-2. **Create session directory** — `docs/auto-superpowers/sessions/<YYYY-MM-DD-HHMM-slug>/` (follow slug rules in `skills/session-artifacts/SKILL.md`)
-3. **Write session-log.md header** — task, stop-at, persona skills detected (use `Skill` tool listing to populate)
+2. **Create or reuse session directory** — If the caller passed an existing session directory path (the `/auto` pipeline driver does this), reuse it and skip creation. Otherwise create `docs/auto-superpowers/sessions/<YYYY-MM-DD-HHMM-slug>/` (follow slug rules in `skills/session-artifacts/SKILL.md`). Detect a pipeline-provided session dir by looking for `SESSION_DIR:` followed by a path in the input prompt, or by checking for an existing `session-log.md` in a directory path the caller named explicitly.
+3. **Write or extend session-log.md header** — If `session-log.md` does not yet exist in the session dir, write the full header (task, stop-at, persona skills detected — use `Skill` tool listing to populate). If it already exists (pipeline mode), append a `## Phase: brainstorming` section marker instead; do NOT rewrite the file header, the pipeline driver owned it.
 4. **Explore project context** — check files, docs, recent commits (read-only)
 5. **Identify the decision list** — enumerate the tier-B/C decisions this brainstorm needs to resolve
 6. **Dispatch decision-proxy per decision** — one dispatch per decision, in order, appending a session-log.md entry after each
