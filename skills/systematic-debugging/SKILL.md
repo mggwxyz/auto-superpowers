@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+description: "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. Autonomous variant: 3+ failures halts to halted.md instead of asking the user; Phase 1 investigation with no strong hypothesis is tier-C."
 ---
 
 # Systematic Debugging
@@ -119,6 +119,15 @@ You MUST complete each phase before proceeding to the next.
    - Keep tracing up until you find the source
    - Fix at source, not at symptom
 
+6. **Hypothesis confidence check (tier-C gate)**
+
+   After completing steps 1–5, assess: do I have a strong hypothesis about the root cause?
+
+   - **Strong hypothesis** (high confidence, specific file/line/mechanism): proceed to Phase 2.
+   - **Weak or no hypothesis** (the symptoms are clear but the cause is diffuse or cross-cutting): this is a tier-C investigation. Dispatch `decision-proxy` with `tier: C` and the full evidence trail. If the proxy returns high-confidence, proceed. Otherwise write `halted.md` naming the symptom, the evidence gathered, and the proxy's tentative direction (if any). STOP.
+
+   This prevents the autonomous agent from "powering through" a mystery by guessing — which is exactly the anti-pattern systematic debugging exists to prevent.
+
 ### Phase 2: Pattern Analysis
 
 **Find the pattern before fixing:**
@@ -196,21 +205,22 @@ You MUST complete each phase before proceeding to the next.
    - **If ≥ 3: STOP and question the architecture (step 5 below)**
    - DON'T attempt Fix #4 without architectural discussion
 
-5. **If 3+ Fixes Failed: Question Architecture**
+5. **If 3+ Fixes Failed: Halt to halted.md**
 
    **Pattern indicating architectural problem:**
    - Each fix reveals new shared state/coupling/problem in different place
    - Fixes require "massive refactoring" to implement
    - Each fix creates new symptoms elsewhere
 
-   **STOP and question fundamentals:**
-   - Is this pattern fundamentally sound?
-   - Are we "sticking with it through sheer inertia"?
-   - Should we refactor architecture vs. continue fixing symptoms?
+   **HALT:** write `<session-dir>/halted.md` with:
+   - The original failing test and its output
+   - The list of fix attempts tried, each with a one-line description and why it failed
+   - The proxy's tentative architectural hypothesis (dispatch the `decision-proxy` with `tier: C` and include the fix history as context)
+   - The question: "Is this pattern fundamentally sound, or is a deeper refactor required?"
 
-   **Discuss with your human partner before attempting more fixes**
+   STOP. Do NOT attempt fix #4. Do NOT silently mask the failure. The user will resume with `/auto --resume <session-dir>` after reading `halted.md`.
 
-   This is NOT a failed hypothesis - this is a wrong architecture.
+   This is NOT a failed hypothesis — this is a wrong architecture, and autonomous mode must defer to the user for architectural pivots.
 
 ## Red Flags - STOP and Follow Process
 
@@ -231,16 +241,18 @@ If you catch yourself thinking:
 
 **If 3+ fixes failed:** Question the architecture (see Phase 4.5)
 
-## your human partner's Signals You're Doing It Wrong
+## Self-signals you're doing it wrong
 
-**Watch for these redirections:**
-- "Is that not happening?" - You assumed without verifying
-- "Will it show us...?" - You should have added evidence gathering
-- "Stop guessing" - You're proposing fixes without understanding
-- "Ultrathink this" - Question fundamentals, not just symptoms
-- "We're stuck?" (frustrated) - Your approach isn't working
+**Watch for these patterns in your own process:**
+- You assumed a behavior without verifying it empirically
+- You proposed a fix without adding evidence gathering first
+- You're reaching for a fix without a specific hypothesis
+- You're treating symptoms, not root cause
+- You're iterating on fixes without new information between attempts
 
-**When you see these:** STOP. Return to Phase 1.
+**When you catch yourself:** STOP. Return to Phase 1. If you cannot get unstuck without guidance, write `halted.md` and halt rather than guess.
+
+(The autonomous version of this skill cannot ask the user mid-run; the halt path replaces the "ask partner" escape hatch.)
 
 ## Common Rationalizations
 
