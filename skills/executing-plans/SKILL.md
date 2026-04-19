@@ -17,6 +17,7 @@ Load plan, self-check against repo state, execute all tasks non-interactively wi
 
 - `SESSION_DIR: <path>` — the session directory to work in.
 - `PLAN: <path>` — the plan to execute. If absent, default to `<session-dir>/plan.md`.
+- `STOP_AT: <impl|pr|merged>` — the pipeline's stop-at level. If absent, default to `impl`.
 
 If no `SESSION_DIR:` line is present, fall back to the most recent directory under `docs/auto-superpowers/sessions/`. If no plan exists there, emit a one-line error and stop.
 
@@ -73,9 +74,21 @@ After all tasks complete and the test suite passes:
   ```
 
   If gitignored (exit 0), skip the session-artifact commit and note "execute-phase commit skipped (gitignored)" in status. Do NOT use `git add -f` to force-commit a gitignored path — respect the user's gitignore. (The task commits produced during execution are unrelated to this session-log commit and are never gitignored.)
-- Emit terse status: session dir, tasks completed, halts, current branch, HEAD sha. Return. Do NOT invoke `finishing-a-development-branch` — Phase 3 adds that.
+- Emit terse status: session dir, tasks completed, halts, current branch, HEAD sha.
 
-Phase 2 always stops at `impl`. Phase 3 adds `--stop-at pr` and `--stop-at merged` stages that chain into `finishing-a-development-branch`.
+Default stop-at is `impl`. With `--stop-at pr` or `--stop-at merged`, Step 4 chains into `finishing-a-development-branch`.
+
+### Step 4: Finish branch (--stop-at=pr or --stop-at=merged)
+
+If `STOP_AT` is `pr` or `merged`:
+- Invoke `auto-superpowers:finishing-a-development-branch` via the `Skill` tool with:
+  ```
+  SESSION_DIR: <path>
+  STOP_AT: <pr|merged>
+  ```
+- Include the skill's return status (PR URL or error) in this skill's return status.
+
+If `STOP_AT` is `impl` (default): skip Step 4. Emit terse status and return.
 
 ## When to halt
 
@@ -119,5 +132,4 @@ Phase 2 always stops at `impl`. Phase 3 adds `--stop-at pr` and `--stop-at merge
 - **auto-superpowers:decision-proxy** — For tier-B/C dispatches during execution
 - **auto-superpowers:session-artifacts** — For the session-log.md and halted.md formats
 
-**Phase 3 adds:**
-- **auto-superpowers:finishing-a-development-branch** — Completion after all tasks (merge / PR / keep logic)
+- **auto-superpowers:finishing-a-development-branch** — Invoked in Step 4 for --stop-at=pr/merged
