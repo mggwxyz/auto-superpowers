@@ -69,6 +69,7 @@ PRs containing multiple unrelated changes will be closed. Split them into separa
 Skills are not prose — they are code that shapes agent behavior. If you modify skill content:
 
 - Use `superpowers:writing-skills` to develop and test changes
+- For auto-superpowers skills, use `auto-superpowers:writing-skills` to develop and test
 - Run adversarial pressure testing across multiple sessions
 - Show before/after eval results in your PR
 - Do not modify carefully-tuned content (Red Flags tables, rationalization lists, "human partner" language) without evidence the change is an improvement
@@ -76,6 +77,18 @@ Skills are not prose — they are code that shapes agent behavior. If you modify
 ## Understand the Project Before Contributing
 
 Before proposing changes to skill design, workflow philosophy, or architecture, read existing skills and understand the project's design decisions. Superpowers has its own tested philosophy about skill design, agent behavior shaping, and terminology (e.g., "your human partner" is deliberate, not interchangeable with "the user"). Changes that rewrite the project's voice or restructure its approach without understanding why it exists will be rejected.
+
+## auto-superpowers Fork Notes
+
+This repository is the `auto-superpowers` fork. Skills are namespaced as `auto-superpowers:*` (e.g., `auto-superpowers:brainstorming`). The upstream `superpowers:*` namespace still works for interactive-mode skills.
+
+**Phase 3 completion criteria:**
+- `/calibrate-proxy` command works interactively
+- `--stop-at=pr` creates a PR with rich context (decisions summary, spec highlights, test results)
+- `--stop-at=merged` behaves identically to `--stop-at=pr` (safe default; auto-merge gated on user opt-in)
+- `finishing-a-development-branch`, `receiving-code-review`, and `requesting-code-review` are rewritten for autonomous mode
+- Session-start hook detects co-installed upstream superpowers and avoids duplicate preambles
+- README documents auto-superpowers (not upstream superpowers)
 
 ## General
 
