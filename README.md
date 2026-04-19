@@ -1,190 +1,89 @@
-# Superpowers
+# auto-superpowers
 
-Superpowers is a complete software development workflow for your coding agents, built on top of a set of composable "skills" and some initial instructions that make sure your agent uses them.
+An autonomous fork of [superpowers](https://github.com/obra/superpowers) that runs spec → plan → execute pipelines non-interactively. Tell it what to build, walk away, come back to working code — or a clear explanation of why it stopped.
+
+## Quick start
+
+```bash
+# Install the plugin
+claude plugins add mggwxyz/auto-superpowers
+
+# Start a new session and run the full pipeline
+/auto "build a CLI tool that counts words per line in a file"
+```
+
+That's it. The agent brainstorms a spec, writes an implementation plan, executes it with TDD and verification gates, and stops when done. Every meaningful decision is logged to a session directory you can review afterward.
 
 ## How it works
 
-It starts from the moment you fire up your coding agent. As soon as it sees that you're building something, it *doesn't* just jump into trying to write code. Instead, it steps back and asks you what you're really trying to do. 
+auto-superpowers replaces interactive dialogue with a **decision-proxy** — a subagent that consults installed skills and `user-preferences.md` to answer questions the agent would normally ask you. Decisions are classified into tiers:
 
-Once it's teased a spec out of the conversation, it shows it to you in chunks short enough to actually read and digest. 
+- **Tier A** (mechanical): decided silently
+- **Tier B** (substantive): decided by the proxy, logged to `session-log.md`
+- **Tier C** (load-bearing): decided by the proxy if high confidence, otherwise the session **halts** to `halted.md` and waits for you
 
-After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY. 
+The session directory (`docs/auto-superpowers/sessions/<timestamp-slug>/`) contains the full audit trail: `session-log.md`, `spec.md`, `plan.md`, and `halted.md` (if halted).
 
-Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for Claude to be able to work autonomously for a couple hours at a time without deviating from the plan you put together.
+## Commands
 
-There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has Superpowers.
+| Command | What it does |
+|---------|-------------|
+| `/auto "task"` | Full pipeline: brainstorm → plan → execute |
+| `/auto-brainstorm "task"` | Brainstorm only — produces `spec.md` |
+| `/auto-plan` | Plan only — reads `spec.md`, produces `plan.md` |
+| `/auto-execute` | Execute only — reads `plan.md`, implements with TDD |
+| `/calibrate-proxy` | Review session decisions interactively (the only interactive command) |
 
+### Pipeline control
 
-## Sponsorship
+- `--stop-at spec` — stop after brainstorming
+- `--stop-at plan` — stop after planning
+- `--stop-at impl` — stop after implementation (default)
+- `--stop-at pr` — stop after creating a pull request
+- `--stop-at merged` — same as `pr` until you opt into auto-merge
 
-If Superpowers has helped you do stuff that makes money and you are so inclined, I'd greatly appreciate it if you'd consider [sponsoring my opensource work](https://github.com/sponsors/obra).
-
-Thanks! 
-
-- Jesse
-
-
-## Installation
-
-**Note:** Installation differs by platform. Claude Code or Cursor have built-in plugin marketplaces. Codex and OpenCode require manual setup.
-
-### Claude Code Official Marketplace
-
-Superpowers is available via the [official Claude plugin marketplace](https://claude.com/plugins/superpowers)
-
-Install the plugin from Claude marketplace:
+### Resuming halted sessions
 
 ```bash
-/plugin install superpowers@claude-plugins-official
+/auto --resume docs/auto-superpowers/sessions/<dir>/
 ```
 
-### Claude Code (via Plugin Marketplace)
+Read `halted.md`, provide your answer in `session-log.md` or `user-preferences.md`, then resume.
 
-In Claude Code, register the marketplace first:
+## Configuration
 
-```bash
-/plugin marketplace add obra/superpowers-marketplace
-```
+### user-preferences.md
 
-Then install the plugin from this marketplace:
+Create or edit `docs/auto-superpowers/user-preferences.md` to guide autonomous decisions:
 
-```bash
-/plugin install superpowers@superpowers-marketplace
-```
+- **Hard constraints** — rules the proxy must never violate
+- **Strong preferences** — defaults the proxy should follow unless there's a good reason not to
+- **Do not use** — specific tools, patterns, or libraries to avoid
+- **Corrections** — past mistakes flagged via `/calibrate-proxy`
 
-### Cursor (via Plugin Marketplace)
+The decision-proxy reads this file at the start of every dispatch. The more you calibrate, the better autonomous decisions get.
 
-In Cursor Agent chat, install from marketplace:
+### Calibrating after a session
 
-```text
-/add-plugin superpowers
-```
+Run `/calibrate-proxy` after a session to review each tier-B/C decision. Keep good ones, correct bad ones, add preferences to guide future sessions.
 
-or search for "superpowers" in the plugin marketplace.
+## Dual-install with upstream superpowers
 
-### Codex
+auto-superpowers can coexist with the upstream [superpowers](https://github.com/obra/superpowers) plugin. Both are namespaced distinctly:
 
-Tell Codex:
+- `/auto`, `/auto-brainstorm`, `/auto-plan`, `/auto-execute` → `auto-superpowers:*` skills (autonomous)
+- `/brainstorm`, `/write-plan`, `/execute-plan` → `superpowers:*` skills (interactive)
 
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
-```
-
-**Detailed docs:** [docs/README.codex.md](docs/README.codex.md)
-
-### OpenCode
-
-Tell OpenCode:
-
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.opencode/INSTALL.md
-```
-
-**Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
-
-### GitHub Copilot CLI
-
-```bash
-copilot plugin marketplace add obra/superpowers-marketplace
-copilot plugin install superpowers@superpowers-marketplace
-```
-
-### Gemini CLI
-
-```bash
-gemini extensions install https://github.com/obra/superpowers
-```
-
-To update:
-
-```bash
-gemini extensions update superpowers
-```
-
-### Verify Installation
-
-Start a new session in your chosen platform and ask for something that should trigger a skill (for example, "help me plan this feature" or "let's debug this issue"). The agent should automatically invoke the relevant superpowers skill.
-
-## The Basic Workflow
-
-1. **brainstorming** - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
-
-2. **using-git-worktrees** - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
-
-3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps.
-
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
-
-5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
-
-6. **requesting-code-review** - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
-
-7. **finishing-a-development-branch** - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
-
-**The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
-
-## What's Inside
-
-### Skills Library
-
-**Testing**
-- **test-driven-development** - RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)
-
-**Debugging**
-- **systematic-debugging** - 4-phase root cause process (includes root-cause-tracing, defense-in-depth, condition-based-waiting techniques)
-- **verification-before-completion** - Ensure it's actually fixed
-
-**Collaboration** 
-- **brainstorming** - Socratic design refinement
-- **writing-plans** - Detailed implementation plans
-- **executing-plans** - Batch execution with checkpoints
-- **dispatching-parallel-agents** - Concurrent subagent workflows
-- **requesting-code-review** - Pre-review checklist
-- **receiving-code-review** - Responding to feedback
-- **using-git-worktrees** - Parallel development branches
-- **finishing-a-development-branch** - Merge/PR decision workflow
-- **subagent-driven-development** - Fast iteration with two-stage review (spec compliance, then code quality)
-
-**Meta**
-- **writing-skills** - Create new skills following best practices (includes testing methodology)
-- **using-superpowers** - Introduction to the skills system
-
-## Philosophy
-
-- **Test-Driven Development** - Write tests first, always
-- **Systematic over ad-hoc** - Process over guessing
-- **Complexity reduction** - Simplicity as primary goal
-- **Evidence over claims** - Verify before declaring success
-
-Read more: [Superpowers for Claude Code](https://blog.fsck.com/2025/10/09/superpowers/)
+No command name collisions. The session-start hook detects co-installation and avoids duplicate preambles.
 
 ## Contributing
 
-Skills live directly in this repository. To contribute:
-
-1. Fork the repository
-2. Create a branch for your skill
-3. Follow the `writing-skills` skill for creating and testing new skills
-4. Submit a PR
-
-See `skills/writing-skills/SKILL.md` for the complete guide.
-
-## Updating
-
-Skills update automatically when you update the plugin:
-
-```bash
-/plugin update superpowers
-```
+See [CLAUDE.md](CLAUDE.md) for contributor guidelines. The short version: this fork maintains the same high PR bar as upstream superpowers (94% rejection rate). Read the guidelines before submitting.
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License — see [LICENSE](LICENSE) file for details.
 
-## Community
+## Credits
 
-Superpowers is built by [Jesse Vincent](https://blog.fsck.com) and the rest of the folks at [Prime Radiant](https://primeradiant.com).
-
-- **Discord**: [Join us](https://discord.gg/35wsABTejz) for community support, questions, and sharing what you're building with Superpowers
-- **Issues**: https://github.com/obra/superpowers/issues
-- **Release announcements**: [Sign up](https://primeradiant.com/superpowers/) to get notified about new versions
+auto-superpowers is built on top of [superpowers](https://github.com/obra/superpowers) by [Jesse Vincent](https://blog.fsck.com) and [Prime Radiant](https://primeradiant.com).
