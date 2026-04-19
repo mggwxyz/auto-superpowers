@@ -7,6 +7,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Co-install detection: if upstream superpowers already injected its preamble,
+# use a shorter note instead of the full preamble.
+CO_INSTALL_SHORT=false
+if [[ -n "${SUPERPOWERS_PREAMBLE_INJECTED:-}" ]]; then
+    CO_INSTALL_SHORT=true
+fi
+
 # Check if legacy skills directory exists and build warning
 warning_message=""
 legacy_skills_dir="${HOME}/.config/superpowers/skills"
@@ -32,7 +39,16 @@ escape_for_json() {
 
 using_superpowers_escaped=$(escape_for_json "$using_superpowers_content")
 warning_escaped=$(escape_for_json "$warning_message")
-session_context="<EXTREMELY_IMPORTANT>\nYou are running inside auto-superpowers — the autonomous fork of superpowers.\n\n**Below is the full content of your 'auto-superpowers:using-auto-superpowers' skill - the autonomous-mode contract and dispatch rules:**\n\n${using_superpowers_escaped}\n\n${warning_escaped}\n</EXTREMELY_IMPORTANT>"
+if [ "$CO_INSTALL_SHORT" = true ]; then
+    short_note="auto-superpowers is active. Autonomous mode overrides interactive behavior for /auto, /auto-brainstorm, /auto-plan, /auto-execute, /calibrate-proxy commands."
+    short_note_escaped=$(escape_for_json "$short_note")
+    session_context="<EXTREMELY_IMPORTANT>\n${short_note_escaped}\n${warning_escaped}\n</EXTREMELY_IMPORTANT>"
+else
+    session_context="<EXTREMELY_IMPORTANT>\nYou are running inside auto-superpowers — the autonomous fork of superpowers.\n\n**Below is the full content of your 'auto-superpowers:using-auto-superpowers' skill - the autonomous-mode contract and dispatch rules:**\n\n${using_superpowers_escaped}\n\n${warning_escaped}\n</EXTREMELY_IMPORTANT>"
+fi
+
+# Signal to upstream superpowers (if it runs after us) that auto-superpowers is active
+export AUTO_SUPERPOWERS_PREAMBLE_INJECTED=1
 
 # Output context injection as JSON.
 # Cursor hooks expect additional_context (snake_case).
