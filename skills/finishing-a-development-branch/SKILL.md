@@ -1,200 +1,141 @@
 ---
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
+description: "Use when auto-superpowers needs to finish a development branch after executing-plans completes. Stop-at-aware: creates PRs with rich context for --stop-at=pr/merged, or returns silently for --stop-at=impl."
 ---
 
 # Finishing a Development Branch
 
 ## Overview
 
-Guide completion of development work by presenting clear options and handling chosen workflow.
+Complete a development branch by creating a PR with rich context or returning silently, depending on `--stop-at`. No interactive menu — the pipeline driver already decided the stop-at level.
 
-**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+**Announce at start:** "I'm using the auto-superpowers:finishing-a-development-branch skill to complete this work."
 
-**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
+**Context:** You are running inside the auto-superpowers plugin. Read `skills/using-auto-superpowers/SKILL.md` and `skills/session-artifacts/SKILL.md` before starting. The caller provides the session directory and stop-at level.
+
+**Input parsing:** Look for these sentinels on their own lines in the input prompt:
+
+- `SESSION_DIR: <path>` — the session directory.
+- `STOP_AT: <impl|pr|merged>` — what the pipeline requested. If absent, default to `impl`.
+
+If no `SESSION_DIR:` line is present, fall back to the most recent directory under `docs/auto-superpowers/sessions/`.
+
+<HARD-GATE>
+Do NOT proceed if `<session-dir>/halted.md` exists. A prior stage halted on a tier-C decision and the user has not resumed. Return terse status reporting the halt and stop.
+</HARD-GATE>
 
 ## The Process
 
-### Step 1: Verify Tests
+### Step 1: Route by stop-at
 
-**Before presenting options, verify tests pass:**
+- `--stop-at=impl`: This skill should not have been invoked. Emit a one-line note: "stop-at=impl — no branch finishing needed." Return.
+- `--stop-at=pr` or `--stop-at=merged`: Continue to Step 2.
 
-```bash
-# Run project's test suite
-npm test / cargo test / pytest / go test ./...
-```
+### Step 2: Verify tests
 
-**If tests fail:**
-```
-Tests failing (<N> failures). Must fix before completing:
+Run the project's test suite. If tests fail, do NOT create a PR. Log the failure to `session-log.md` and return with error status. Do not write `halted.md` — test failures at this stage are tool failures the user can retry, not tier-C decisions.
 
-[Show failures]
-
-Cannot proceed with merge/PR until tests pass.
-```
-
-Stop. Don't proceed to Step 2.
-
-**If tests pass:** Continue to Step 2.
-
-### Step 2: Determine Base Branch
+### Step 3: Determine base branch
 
 ```bash
 # Try common base branches
 git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 ```
 
-Or ask: "This branch split from main - is that correct?"
+Use whichever branch has a merge-base. If neither works, default to `main`.
 
-### Step 3: Present Options
-
-Present exactly these 4 options:
-
-```
-Implementation complete. What would you like to do?
-
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
-4. Discard this work
-
-Which option?
-```
-
-**Don't add explanation** - keep options concise.
-
-### Step 4: Execute Choice
-
-#### Option 1: Merge Locally
-
-```bash
-# Switch to base branch
-git checkout <base-branch>
-
-# Pull latest
-git pull
-
-# Merge feature branch
-git merge <feature-branch>
-
-# Verify tests on merged result
-<test command>
-
-# If tests pass
-git branch -d <feature-branch>
-```
-
-Then: Cleanup worktree (Step 5)
-
-#### Option 2: Push and Create PR
+### Step 4: Push and create PR
 
 ```bash
 # Push branch
 git push -u origin <feature-branch>
 
-# Create PR
+# Create PR with rich template
 gh pr create --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<2-3 bullets of what changed>
-
-## Test Plan
-- [ ] <verification steps>
+<PR body from template below>
 EOF
 )"
 ```
 
-Then: Cleanup worktree (Step 5)
+**PR body template:**
 
-#### Option 3: Keep As-Is
+```markdown
+## Summary
 
-Report: "Keeping branch <name>. Worktree preserved at <path>."
+<1-3 sentence summary from spec.md>
 
-**Don't cleanup worktree.**
+## Key autonomous decisions
 
-#### Option 4: Discard
+<Extract tier-B/C decisions from session-log.md, 1 line each>
 
-**Confirm first:**
-```
-This will permanently delete:
-- Branch <name>
-- All commits: <commit-list>
-- Worktree at <path>
+## Architecture
 
-Type 'discard' to confirm.
-```
+<2-3 sentences from plan.md Architecture section>
 
-Wait for exact confirmation.
+## Test results
 
-If confirmed:
-```bash
-git checkout <base-branch>
-git branch -D <feature-branch>
-```
+<Test suite output summary: N tests passed, 0 failed>
 
-Then: Cleanup worktree (Step 5)
+## Session artifacts
 
-### Step 5: Cleanup Worktree
+- Session directory: `<session-dir>/`
+- [session-log.md](<relative-path>) — full decision transcript
+- [spec.md](<relative-path>) — design spec
+- [plan.md](<relative-path>) — implementation plan
 
-**For Options 1, 2, 4:**
+---
 
-Check if in worktree:
-```bash
-git worktree list | grep $(git branch --show-current)
+Generated by [auto-superpowers](https://github.com/mggwxyz/auto-superpowers)
 ```
 
-If yes:
-```bash
-git worktree remove <worktree-path>
-```
+**Title format:** Use the session slug, prefixed with the conventional commit type that best fits (e.g., `feat: <slug>` or `fix: <slug>`).
 
-**For Option 3:** Keep worktree.
+If `gh pr create` fails (e.g., no remote, auth issue), log the failure to `session-log.md` and return an error status. Do NOT write `halted.md` — PR creation failure is a tool failure, not a tier-C decision.
 
-## Quick Reference
+### Step 5: Handle --stop-at=merged
 
-| Option | Merge | Push | Keep Worktree | Cleanup Branch |
-|--------|-------|------|---------------|----------------|
-| 1. Merge locally | ✓ | - | - | ✓ |
-| 2. Create PR | - | ✓ | ✓ | - |
-| 3. Keep as-is | - | - | ✓ | - |
-| 4. Discard | - | - | - | ✓ (force) |
+After creating the PR (Step 4):
 
-## Common Mistakes
+- Read `docs/auto-superpowers/user-preferences.md`.
+- If it contains `allow-auto-merge: true` under any section: run `gh pr merge --auto --squash <pr-number>` to enable GitHub auto-merge. Log this to `session-log.md`.
+- If it does NOT contain `allow-auto-merge: true` (the default): do nothing beyond what Step 4 did. The PR body includes: "This PR was created by auto-superpowers. Merge when ready."
+- `--stop-at=merged` produces identical behavior to `--stop-at=pr` until the user opts in via `allow-auto-merge: true`.
 
-**Skipping test verification**
-- **Problem:** Merge broken code, create failing PR
-- **Fix:** Always verify tests before offering options
+### Step 6: Return status
 
-**Open-ended questions**
-- **Problem:** "What should I do next?" → ambiguous
-- **Fix:** Present exactly 4 structured options
+Emit terse status: PR URL (if created), branch name, any errors. Return. Do NOT invoke any other skill.
 
-**Automatic worktree cleanup**
-- **Problem:** Remove worktree when might need it (Option 2, 3)
-- **Fix:** Only cleanup for Options 1 and 4
+## Error Handling
 
-**No confirmation for discard**
-- **Problem:** Accidentally delete work
-- **Fix:** Require typed "discard" confirmation
+- **Tests fail:** Log to session-log.md, return error status. No PR created. No halted.md.
+- **`gh pr create` fails:** Log to session-log.md, return error status. No halted.md.
+- **No remote configured:** Log error, return. The user needs to set up a remote.
+- **`gh` not installed:** Log error, return.
 
 ## Red Flags
 
 **Never:**
-- Proceed with failing tests
-- Merge without verifying tests on result
-- Delete work without confirmation
-- Force-push without explicit request
+- Create a PR with failing tests
+- Force-push without explicit user request
+- Merge to main/master autonomously (unless `allow-auto-merge: true` in user-preferences.md AND --stop-at=merged)
+- Ask the user a question mid-run — dispatch the decision-proxy instead
+- Write halted.md for tool failures (gh errors, auth issues) — those are retryable, not tier-C
 
 **Always:**
-- Verify tests before offering options
-- Present exactly 4 options
-- Get typed confirmation for Option 4
-- Clean up worktree for Options 1 & 4 only
+- Verify tests before creating PR
+- Use the rich PR body template
+- Log PR creation (or failure) to session-log.md
+- Check user-preferences.md for allow-auto-merge before enabling auto-merge
 
 ## Integration
 
 **Called by:**
-- **subagent-driven-development** (Step 7) - After all tasks complete
-- **executing-plans** (Step 5) - After all batches complete
+- **auto-superpowers:executing-plans** (Phase 3) — After all tasks complete, when --stop-at is pr or merged
+- **auto-superpowers:subagent-driven-development** — After all tasks complete
+
+**Required reading:**
+- **auto-superpowers:using-auto-superpowers** — The autonomous-mode contract
+- **auto-superpowers:session-artifacts** — Session directory layout and log formats
 
 **Pairs with:**
-- **using-git-worktrees** - Cleans up worktree created by that skill
+- **auto-superpowers:using-git-worktrees** — Cleans up worktree created by that skill
