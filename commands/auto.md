@@ -7,7 +7,7 @@ You have been invoked via the `/auto` command. The user has walked away and expe
 **Parse arguments from `$ARGUMENTS`:**
 
 - First positional argument (or everything before any `--flag`) is the task description. If empty, emit a usage error and stop.
-- `--stop-at <spec|plan|impl>` — default `impl`. Where the pipeline halts on success.
+- `--stop-at <spec|plan|impl|pr|merged>` — default `impl`. Where the pipeline halts on success.
 - `--persona <skill[,skill...]>` — force specific skills to be the primary persona sources during Stage 1 (brainstorming). Personas are brainstorming-only; writing-plans and executing-plans do not take a persona parameter.
 - `--resume <session-dir>` — pick up a previously halted session. Before invoking Stage 1, read `<session-dir>/halted.md` into context, then archive it by renaming to `halted-resolved-<YYYY-MM-DD-HHMM>.md` so downstream HARD-GATEs do not trigger on the stale halt file. The user is expected to have addressed the halt's question in `session-log.md` or `user-preferences.md` before resuming.
 
@@ -54,7 +54,19 @@ You have been invoked via the `/auto` command. The user has walked away and expe
 
    When the skill returns:
    - If `halted.md` exists → STOP.
-   - Otherwise (stop-at=impl, default) → emit terse status with the branch name, HEAD sha, tasks completed, any halts.
+   - Otherwise, continue to Stage 4 (if `--stop-at` is `pr` or `merged`), or emit terse status.
+
+6b. **Stage 4 — Finishing branch (--stop-at=pr or --stop-at=merged only).** If `--stop-at` is `pr` or `merged`, invoke `auto-superpowers:finishing-a-development-branch` via the `Skill` tool with this input prompt format:
+
+   ```
+   SESSION_DIR: <path>
+   STOP_AT: <pr|merged>
+   ```
+
+   When the skill returns:
+   - If it reports a PR URL → include it in the pipeline status.
+   - If it reports an error (e.g., gh failure) → note the error in pipeline status, do NOT write halted.md.
+   - If `--stop-at` is `impl` (the default) → skip this stage entirely.
 
 7. **Emit terse pipeline status** in this shape:
 
@@ -62,9 +74,10 @@ You have been invoked via the `/auto` command. The user has walked away and expe
    auto-superpowers> Pipeline complete (or halted at stage N)
                      Session: docs/auto-superpowers/sessions/<dir>/
                      Stop-at: <value>
-                     Stages completed: [brainstorm, plan, execute]
+                     Stages completed: [brainstorm, plan, execute(, finish)]
                      Branch: <branch name>
                      HEAD: <sha>
+                     PR: <url or "n/a">
                      Halts: <count> (see halted.md if > 0)
                      Run /calibrate-proxy to review decisions (Phase 3).
    ```
