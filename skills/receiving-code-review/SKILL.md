@@ -1,6 +1,6 @@
 ---
 name: receiving-code-review
-description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
+description: "Use when auto-superpowers receives code review feedback during autonomous execution. Dispatches decision-proxy for unclear feedback and pushback decisions instead of asking the user. Tier-based routing replaces source-based handling."
 ---
 
 # Code Review Reception
@@ -8,6 +8,14 @@ description: Use when receiving code review feedback, before implementing sugges
 ## Overview
 
 Code review requires technical evaluation, not emotional performance.
+
+**Context:** You are running inside the auto-superpowers plugin. The user is not at the keyboard. Any feedback you receive comes from a code-reviewer subagent or from GitHub PR comments discovered during execution. Never ask the user for clarification — dispatch the decision-proxy instead.
+
+**Input parsing:** Look for `SESSION_DIR: <path>` sentinel in the input prompt. If present, use it for session-log.md entries.
+
+<HARD-GATE>
+Do NOT proceed if `<session-dir>/halted.md` exists. A prior stage halted on a tier-C decision and the user has not resumed. Return terse status reporting the halt and stop.
+</HARD-GATE>
 
 **Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
 
@@ -40,50 +48,31 @@ WHEN receiving code review feedback:
 ## Handling Unclear Feedback
 
 ```
-IF any item is unclear:
-  STOP - do not implement anything yet
-  ASK for clarification on unclear items
+IF any feedback item is unclear:
+  Dispatch decision-proxy with tier: B for each unclear item
+  Question: "Review feedback says '<item>'. What does this mean in context of <file/function>?"
+  Options: [interpret as X, interpret as Y, skip — not actionable]
 
-WHY: Items may be related. Partial understanding = wrong implementation.
-```
+  IF proxy resolves it: apply the resolution, log to session-log.md
+  IF proxy cannot resolve (low confidence): add to halted.md as tier-C halt, STOP
 
-**Example:**
-```
-your human partner: "Fix 1-6"
-You understand 1,2,3,6. Unclear on 4,5.
-
-❌ WRONG: Implement 1,2,3,6 now, ask about 4,5 later
-✅ RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
+WHY: Guessing at unclear feedback produces wrong fixes. The proxy either resolves it or halts.
 ```
 
 ## Source-Specific Handling
 
-### From your human partner
-- **Trusted** - implement after understanding
-- **Still ask** if scope unclear
-- **No performative agreement**
-- **Skip to action** or technical acknowledgment
+### From code-reviewer subagent
+- **Tier A/B by default** — the subagent is a peer, not a user
+- Implement after verification against codebase
+- No performative agreement (same as upstream)
+- If feedback contradicts the plan or spec, dispatch `decision-proxy` with tier: B to resolve the conflict
 
-### From External Reviewers
-```
-BEFORE implementing:
-  1. Check: Technically correct for THIS codebase?
-  2. Check: Breaks existing functionality?
-  3. Check: Reason for current implementation?
-  4. Check: Works on all platforms/versions?
-  5. Check: Does reviewer understand full context?
-
-IF suggestion seems wrong:
-  Push back with technical reasoning
-
-IF can't easily verify:
-  Say so: "I can't verify this without [X]. Should I [investigate/ask/proceed]?"
-
-IF conflicts with your human partner's prior decisions:
-  Stop and discuss with your human partner first
-```
-
-**your human partner's rule:** "External feedback - be skeptical, but check carefully"
+### From GitHub PR comments (external reviewers)
+- **Tier B/C depending on scope:**
+  - Style, naming, minor refactors → tier B: dispatch `decision-proxy`, apply resolution
+  - Architecture changes, scope expansion, security concerns → tier C: dispatch `decision-proxy` with `tier: C`. If proxy returns high confidence, apply. Otherwise halt to `halted.md`.
+- Before implementing: verify technically correct for THIS codebase (same checks as upstream)
+- If suggestion conflicts with the plan's architectural decisions, that is tier C — dispatch proxy
 
 ## YAGNI Check for "Professional" Features
 
@@ -95,7 +84,7 @@ IF reviewer suggests "implementing properly":
   IF used: Then implement properly
 ```
 
-**your human partner's rule:** "You and reviewer both report to me. If we don't need this feature, don't add it."
+**Design principle:** "You and reviewer both report to the spec. If we don't need this feature, don't add it."
 
 ## Implementation Order
 
@@ -112,21 +101,13 @@ FOR multi-item feedback:
 
 ## When To Push Back
 
-Push back when:
-- Suggestion breaks existing functionality
-- Reviewer lacks full context
-- Violates YAGNI (unused feature)
-- Technically incorrect for this stack
-- Legacy/compatibility reasons exist
-- Conflicts with your human partner's architectural decisions
+Push back when the same conditions as upstream apply (breaks functionality, reviewer lacks context, violates YAGNI, technically incorrect, legacy reasons, conflicts with architectural decisions).
 
-**How to push back:**
-- Use technical reasoning, not defensiveness
-- Ask specific questions
-- Reference working tests/code
-- Involve your human partner if architectural
-
-**Signal if uncomfortable pushing back out loud:** "Strange things are afoot at the Circle K"
+**How to push back (autonomous mode):**
+- For non-trivial pushback decisions, dispatch `decision-proxy` with the feedback item and your technical reasoning as context. The proxy can invoke `auto-superpowers:code-reviewer` for a second opinion.
+- If the proxy agrees with pushback: note the pushback in session-log.md, do not implement the item.
+- If the proxy disagrees: implement the feedback, note the override in session-log.md.
+- If the proxy cannot decide (low confidence on tier-C scope): halt to `halted.md`.
 
 ## Acknowledging Correct Feedback
 
@@ -195,7 +176,7 @@ Reviewer: "Implement proper metrics tracking with database, date filters, CSV ex
 
 **Unclear Item (Good):**
 ```
-your human partner: "Fix items 1-6"
+the plan: "Fix items 1-6"
 You understand 1,2,3,6. Unclear on 4,5.
 ✅ "Understand 1,2,3,6. Need clarification on 4 and 5 before implementing."
 ```
