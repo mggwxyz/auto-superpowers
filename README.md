@@ -5,8 +5,11 @@ An autonomous fork of [superpowers](https://github.com/obra/superpowers) that ru
 ## Quick start
 
 ```bash
+# Add the marketplace
+/plugin marketplace add mggwxyz/auto-superpowers
+
 # Install the plugin
-claude plugins add mggwxyz/auto-superpowers
+/plugin install auto-superpowers@mggwxyz-auto-superpowers
 
 # Start a new session and run the full pipeline
 /auto "build a CLI tool that counts words per line in a file"
