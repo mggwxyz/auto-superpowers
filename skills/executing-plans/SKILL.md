@@ -65,6 +65,7 @@ For each task in order:
 After all tasks complete and the test suite passes:
 
 - Append a "## Halts" section to `session-log.md` if any halts occurred (or `(none)` if clean).
+- Update the `## TLDR` section in `session-log.md` to reflect execution results (tasks completed, test status, any halts).
 - Check whether the session directory is gitignored: run `git check-ignore -q <session-dir>`. Exit 0 means gitignored; exit 1 means tracked. If tracked (exit 1), `git add <session-dir>/session-log.md` and commit with:
 
   ```

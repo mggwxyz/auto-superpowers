@@ -155,7 +155,8 @@ Steps:
 2. For every meaningful planning decision (e.g., "split this into 8 tasks vs. 4", "put helpers in a new file vs. extend an existing one", "use pytest vs. unittest"), dispatch the decision-proxy and log the entry. Tier-A mechanical choices (function names, task numbering) are silent.
 3. Write `<session-dir>/plan.md` with the tasks, the Plan Document Header, and per-task `Tier:` annotations.
 4. Run the Self-Review checklist above. Fix inline.
-5. Check whether the session directory is gitignored: run `git check-ignore -q <session-dir>`. Exit 0 means gitignored; exit 1 means tracked. If tracked (exit 1), `git add <session-dir>/plan.md` and commit with:
+5. Update the `## TLDR` section in `session-log.md` to reflect the plan phase (e.g., append what the plan covers and how many tasks it has).
+6. Check whether the session directory is gitignored: run `git check-ignore -q <session-dir>`. Exit 0 means gitignored; exit 1 means tracked. If tracked (exit 1), `git add <session-dir>/plan.md` and commit with:
 
    ```
    auto-superpowers: plan for <slug>
@@ -164,4 +165,4 @@ Steps:
    ```
 
    If gitignored (exit 0), skip the commit and note "plan commit skipped (gitignored)" in the return status. Do NOT use `git add -f` to force-commit a gitignored path — respect the user's gitignore.
-6. Emit terse status: session dir, plan path, decision count, any halts. Return. Do NOT invoke executing-plans, subagent-driven-development, or any other skill — the pipeline driver owns what happens next.
+7. Emit terse status: session dir, plan path, decision count, any halts. Return. Do NOT invoke executing-plans, subagent-driven-development, or any other skill — the pipeline driver owns what happens next.

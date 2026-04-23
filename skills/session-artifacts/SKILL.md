@@ -34,6 +34,9 @@ Task: <one-line task description>
 Stop at: <spec|plan|impl|pr|merged>
 Skills available for persona expertise: <comma-separated list, or "none detected">
 
+## TLDR
+<2-4 sentence summary of what this session produced, the key decisions made, and whether it completed or halted. Written after brainstorming completes; updated at the end of each subsequent phase.>
+
 ## Phase: brainstorming
 ```
 

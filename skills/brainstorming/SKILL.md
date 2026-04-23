@@ -134,6 +134,10 @@ After writing, look at the spec with fresh eyes:
 
 Fix any issues inline. No re-review.
 
+**Write the TLDR:**
+
+After the spec is finalized, prepend a `## TLDR` section to `session-log.md` (after the header, before `## Phase: brainstorming`). Summarize in 2-4 sentences: what the session produced, the key decisions made, and whether it completed or halted. This TLDR is the first thing a human reads when reviewing a session — make it worth their time.
+
 **Commit the session directory (conditional):**
 
 Before committing, check whether the session directory is gitignored:
