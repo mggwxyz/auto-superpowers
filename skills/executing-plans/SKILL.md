@@ -125,7 +125,7 @@ If `STOP_AT` is `impl` (default): skip Step 4. Emit terse status and return.
 ## Integration
 
 **Required workflow skills:**
-- **auto-superpowers:using-git-worktrees** (or upstream) — REQUIRED: Set up isolated workspace before starting. Phase 2's `/auto` pipeline driver does NOT auto-create worktrees yet — it refuses to run on main/master and expects the caller to have created a feature branch or worktree first. Standalone `/auto-execute` callers have the same responsibility. Phase 3 may add auto-worktree-creation to `/auto`.
+- **auto-superpowers:using-git-worktrees** (or upstream) — REQUIRED: Set up isolated workspace before starting. The `/auto` pipeline driver auto-creates a worktree when invoked on main/master (see `commands/auto.md` Step 1). Standalone `/auto-execute` callers are still responsible for being on a feature branch.
 - **auto-superpowers:writing-plans** — Creates the plan this skill executes
 - **auto-superpowers:systematic-debugging** — For root-cause investigation on test failures; enforces the 3+ failures halt rule
 - **auto-superpowers:test-driven-development** — For RED/GREEN/REFACTOR discipline within each task
