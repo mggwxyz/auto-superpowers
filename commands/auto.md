@@ -13,7 +13,25 @@ You have been invoked via the `/auto` command. The user has walked away and expe
 
 **Pipeline steps:**
 
-1. **Parse + pre-flight.** Verify the task description is present. Verify you are NOT on `main`/`master` — if you are, halt with a one-line error telling the user to create a worktree or feature branch first.
+1. **Parse + pre-flight.** Verify the task description is present. Then check the current branch:
+
+   **If on `main` or `master`:**
+   Create a worktree automatically so the pipeline runs on an isolated feature branch.
+
+   a. Derive the branch name from the session slug: `auto/<slug>` (e.g., `auto/build-a-login-flow-with-email-password`).
+   b. Find the worktree directory using this priority:
+      - If `.worktrees/` exists in the project root: use it.
+      - Else if `worktrees/` exists: use it.
+      - Else if CLAUDE.md specifies a worktree directory: use it.
+      - Otherwise: create `.worktrees/` in the project root.
+   c. If the chosen directory is project-local (`.worktrees/` or `worktrees/`), verify it is gitignored: `git check-ignore -q <dir>`. If NOT ignored, add it to `.gitignore` and commit the change.
+   d. Create the worktree: `git worktree add <dir>/<branch-name> -b <branch-name>`.
+   e. If worktree creation fails (e.g., branch already exists, git error), log the error to session-log.md and STOP the pipeline. The user can `git worktree remove` the stale worktree and retry.
+   f. Log the worktree path and branch name to session-log.md.
+   g. All subsequent pipeline steps run in the worktree context. Use absolute paths or `cd` to the worktree before invoking each stage.
+
+   **If NOT on `main`/`master`:**
+   Proceed as before — no worktree needed, the user is already on a feature branch.
 
 2. **Create (or resume) session directory.** Default path: `docs/auto-superpowers/sessions/<YYYY-MM-DD-HHMM-slug>/` following the slug rules in `skills/session-artifacts/SKILL.md`. If `--resume <session-dir>` was provided, reuse that directory AND archive any existing `halted.md` by `mv halted.md halted-resolved-<YYYY-MM-DD-HHMM>.md`. The stale halt file would otherwise block every downstream stage's HARD-GATE.
 
@@ -77,6 +95,7 @@ You have been invoked via the `/auto` command. The user has walked away and expe
                      Stages completed: [brainstorm, plan, execute(, finish)]
                      Branch: <branch name>
                      HEAD: <sha>
+                     Worktree: <path or "n/a">
                      PR: <url or "n/a">
                      Halts: <count> (see halted.md if > 0)
                      Run /calibrate-proxy to review decisions (Phase 3).
